@@ -155,7 +155,7 @@ renderer.toneMappingExposure = 1.1;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xf4f2f8, 0.018);
+scene.fog = new THREE.FogExp2(0xf4f2f8, 0.008);
 
 const camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 0.1, 200);
 camera.position.set(0, 4.5, 11);
@@ -207,17 +207,17 @@ const terrainMat = new THREE.ShaderMaterial({
       float d = length(pos.xz);
 
       // Central hill — gaussian bump, cube sits on top
-      float hill = 3.2 * exp(-d * d * 0.045);
+      float hill = 4.5 * exp(-d * d * 0.038);
 
-      // Traveling waves radiating outward — classic neon-grid style
+      // Traveling waves radiating outward — large amplitude, very visible from side
       float wave =
-        sin(pos.x * 0.7  + uTime * 1.1) * cos(pos.z * 0.6  + uTime * 0.8) * 0.9
-      + sin(pos.x * 1.4  - uTime * 0.7) * sin(pos.z * 1.2  + uTime * 0.9) * 0.45
-      + cos(pos.x * 0.38 + uTime * 0.5) * cos(pos.z * 0.42 - uTime * 0.6) * 0.6
-      + sin((pos.x + pos.z) * 0.55 - uTime * 1.3) * 0.3;
+        sin(pos.x * 0.65 + uTime * 1.0) * cos(pos.z * 0.55 + uTime * 0.75) * 2.8
+      + sin(pos.x * 1.3  - uTime * 0.65) * sin(pos.z * 1.1 + uTime * 0.85) * 1.4
+      + cos(pos.x * 0.36 + uTime * 0.45) * cos(pos.z * 0.40 - uTime * 0.55) * 1.8
+      + sin((pos.x + pos.z) * 0.50 - uTime * 1.2) * 0.9;
 
       // Waves dampen at center so hill is clean
-      float waveMask = smoothstep(0.0, 5.5, d);
+      float waveMask = smoothstep(0.0, 6.0, d);
       pos.y = hill + wave * waveMask;
       vH = pos.y / 4.5;  // normalize for color
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -242,17 +242,17 @@ const terrainMat = new THREE.ShaderMaterial({
       vec2 g2 = fract(vUv * 13.0);
       float gl2 = 1.0 - smoothstep(0.0, 0.018, min(g2.x, g2.y));
 
-      vec3 gridCol = vec3(0.68, 0.78, 0.92);  // soft blue
+      vec3 gridCol = vec3(0.55, 0.70, 0.92);  // visible blue-grey
 
-      // Traveling pulse along grid — moves diagonally, very subtle
+      // Traveling pulse along grid
       float pulse = sin(vUv.x * 38.0 - uTime * 2.2) * 0.5 + 0.5;
       pulse      *= sin(vUv.y * 32.0 + uTime * 1.6) * 0.5 + 0.5;
-      float pulseStrength = pulse * clamp(vH * 0.5 + 0.3, 0.0, 1.0) * 0.12;
+      float pulseStrength = pulse * clamp(vH * 0.5 + 0.3, 0.0, 1.0) * 0.18;
 
       vec3 col = base;
-      col = mix(col, gridCol, gl1 * 0.30);   // fine grid
-      col = mix(col, gridCol, gl2 * 0.14);   // coarse grid
-      col += gridCol * pulseStrength;         // additive pulse glow on lines
+      col = mix(col, gridCol, gl1 * 0.55);   // fine grid — clearly visible
+      col = mix(col, gridCol, gl2 * 0.28);   // coarse grid
+      col += gridCol * pulseStrength;         // pulse glow
 
       // Fade to plain white at edges
       vec2 uvc = abs(vUv - 0.5) * 2.0;
@@ -392,9 +392,9 @@ const cubeMaterials = [
   ]}), roughness: 0.08, metalness: 0.02 }),
 ];
 
-// Cube sits on hill — hill peaks at y≈3.2 at center
+// Cube sits on hill — hill peaks at y≈4.5 at center
 const CUBE_HALF = 2.2;
-const CUBE_Y = 3.2 + CUBE_HALF; // 5.4
+const CUBE_Y = 4.5 + CUBE_HALF; // 6.7
 const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), cubeMaterials);
 cube.position.y = CUBE_Y;
 cube.castShadow = true;
