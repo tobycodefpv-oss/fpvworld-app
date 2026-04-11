@@ -180,19 +180,12 @@
 
 <div id="scroll-space"></div>
 
-<!-- GSAP -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js';
 import { EffectComposer }  from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass }      from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass }      from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/postprocessing/ShaderPass.js';
-import { OutputPass }      from 'https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/postprocessing/OutputPass.js';
-
-gsap.registerPlugin(ScrollTrigger);
 
 // ─────────────────────────────────────────────
 // RENDERER
@@ -535,10 +528,8 @@ composer.addPass(new ShaderPass({
   `,
 }));
 
-composer.addPass(new OutputPass());
-
 // ─────────────────────────────────────────────
-// SCROLL → PROGRESS
+// SCROLL → PROGRESS  (plain window scroll)
 // ─────────────────────────────────────────────
 let scrollP  = 0;
 let smoothP  = 0;
@@ -556,16 +547,14 @@ function setScene(p) {
   s3.classList.toggle('visible', p >= 0.72);
 }
 
-ScrollTrigger.create({
-  trigger: '#scroll-space',
-  start: 'top top',
-  end:   'bottom bottom',
-  onUpdate(self) {
-    scrollP = self.progress;
+window.addEventListener('scroll', () => {
+  const maxScroll = document.body.scrollHeight - window.innerHeight;
+  if (maxScroll > 0) {
+    scrollP = Math.min(window.scrollY / maxScroll, 1);
     progressBar.style.width = (scrollP * 100) + '%';
     setScene(scrollP);
-  },
-});
+  }
+}, { passive: true });
 
 // ─────────────────────────────────────────────
 // ANIMATION LOOP
@@ -576,8 +565,7 @@ const _camTgt = new THREE.Vector3();
 
 function tick() {
   requestAnimationFrame(tick);
-  const t  = clock.getElapsedTime();
-  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
 
   // smooth scroll
   smoothP += (scrollP - smoothP) * 0.07;
