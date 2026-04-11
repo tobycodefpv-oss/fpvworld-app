@@ -147,7 +147,7 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0xf2efe8, 1);
+renderer.setClearColor(0xf4f2f8, 1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -155,7 +155,7 @@ renderer.toneMappingExposure = 1.1;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xf2efe8, 0.024);
+scene.fog = new THREE.FogExp2(0xf4f2f8, 0.018);
 
 const camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 0.1, 200);
 camera.position.set(0, 4.5, 11);
@@ -192,21 +192,101 @@ const rimLight = new THREE.DirectionalLight(0xfff0d8, 0.55);
 rimLight.position.set(2, -6, -14);
 scene.add(rimLight);
 
-// ─── GRID FLOOR ─────────────────────────────────────────────────────────────
-// GridHelper: size, divisions, center-line color, grid-line color
-const grid = new THREE.GridHelper(60, 60, 0xb8a88a, 0xd8d0c4);
-grid.position.y = 0;
-scene.add(grid);
+// ─── WAVE TERRAIN ────────────────────────────────────────────────────────────
+const terrainMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    uniform float uTime;
+    varying vec2 vUv;
+    varying float vH;
+    void main() {
+      vUv = uv;
+      vec3 pos = position;
+      float d = length(pos.xz);
+      // gentle waves, flatten at center so pedestal sits flat
+      float wave = sin(pos.x * 0.55 + uTime * 0.5) * cos(pos.z * 0.48 + uTime * 0.38) * 0.55
+                 + sin(pos.x * 1.1  - uTime * 0.3) * 0.18
+                 + cos(pos.z * 0.9  + uTime * 0.4) * 0.18;
+      float mask = smoothstep(2.5, 7.0, d);  // flat in center
+      pos.y += wave * mask;
+      vH = pos.y;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    varying vec2 vUv;
+    varying float vH;
+    void main() {
+      // Base: very light warm-white
+      vec3 base = vec3(0.955, 0.952, 0.960);
 
-// Shadow receiver (transparent plane that shows only the shadow)
+      // Subtle grid lines — very fine, blue-grey
+      vec2 g = fract(vUv * 42.0);
+      float gridLine = 1.0 - smoothstep(0.0, 0.025, min(g.x, g.y));
+
+      // Diagonal hatch lines — even subtler
+      float hatch = fract((vUv.x + vUv.y) * 28.0 + uTime * 0.04);
+      float hatchLine = 1.0 - smoothstep(0.0, 0.04, hatch);
+
+      // Blue tint for lines
+      vec3 lineCol = vec3(0.72, 0.80, 0.92);  // soft blue-grey
+
+      // Traveling pulse — very faint blue shimmer
+      float pulse = sin(vUv.x * 30.0 - uTime * 1.8) * 0.5 + 0.5;
+      pulse *= sin(vUv.y * 24.0 + uTime * 1.2) * 0.5 + 0.5;
+      vec3 pulseCol = mix(base, vec3(0.78, 0.87, 0.98), pulse * 0.06);
+
+      // Height tint — slightly bluer at wave peaks
+      float h01 = clamp((vH + 0.6) / 1.2, 0.0, 1.0);
+      vec3 col = mix(pulseCol, vec3(0.82, 0.88, 0.97), h01 * 0.12);
+
+      // Overlay lines
+      col = mix(col, lineCol, gridLine * 0.22);
+      col = mix(col, lineCol, hatchLine * 0.08);
+
+      // Fade to white at edges (distance fade via uv)
+      vec2 uv2 = abs(vUv - 0.5) * 2.0;
+      float edgeFade = smoothstep(0.55, 1.0, max(uv2.x, uv2.y));
+      col = mix(col, vec3(0.97, 0.97, 0.98), edgeFade);
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+  side: THREE.DoubleSide,
+});
+
+const terrainGeo = new THREE.PlaneGeometry(80, 80, 120, 120);
+const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+terrain.rotation.x = -Math.PI / 2;
+terrain.position.y = -0.01;
+scene.add(terrain);
+
+// Shadow receiver on top of terrain
 const shadowReceiver = new THREE.Mesh(
   new THREE.PlaneGeometry(30, 30),
-  new THREE.ShadowMaterial({ opacity: 0.14 })
+  new THREE.ShadowMaterial({ opacity: 0.10 })
 );
 shadowReceiver.rotation.x = -Math.PI / 2;
-shadowReceiver.position.y = 0.001;
+shadowReceiver.position.y = 0.005;
 shadowReceiver.receiveShadow = true;
 scene.add(shadowReceiver);
+
+// ─── PEDESTAL ────────────────────────────────────────────────────────────────
+// Small round podest the cube sits on
+const pedMat = new THREE.MeshStandardMaterial({ color: 0xe8e5df, roughness: 0.35, metalness: 0.08 });
+
+const pedBase = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.22, 48), pedMat);
+pedBase.position.y = 0.11;
+pedBase.castShadow = true;
+pedBase.receiveShadow = true;
+scene.add(pedBase);
+
+const pedTop = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, 0.12, 48), pedMat);
+pedTop.position.y = 0.28;
+pedTop.castShadow = true;
+pedTop.receiveShadow = true;
+scene.add(pedTop);
 
 // ─── CUBE FACE TEXTURES ──────────────────────────────────────────────────────
 // BoxGeometry face order: +X(0) -X(1) +Y(2) -Y(3) +Z(4) -Z(5)
@@ -329,10 +409,11 @@ const cubeMaterials = [
   ]}), roughness: 0.08, metalness: 0.02 }),
 ];
 
-// Cube sits on floor — center at y = half of height = 2.2
+// Cube sits on pedestal — pedestal top is at y≈0.40, cube half=2.2
 const CUBE_HALF = 2.2;
+const CUBE_Y = 0.40 + CUBE_HALF; // 2.6
 const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), cubeMaterials);
-cube.position.y = CUBE_HALF;
+cube.position.y = CUBE_Y;
 cube.castShadow = true;
 scene.add(cube);
 
@@ -345,7 +426,7 @@ const edgeMesh = new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(4.42, 4.42, 4.42)),
   edgeMat
 );
-edgeMesh.position.y = CUBE_HALF;
+edgeMesh.position.y = CUBE_Y;
 scene.add(edgeMesh);
 
 // ─── DRONE ──────────────────────────────────────────────────────────────────
@@ -411,22 +492,21 @@ drone.add(droneLight);
 // 6 waypoints → camera visits all 5 visible faces in order, ends at angled CTA view
 // Cube center at y=2.2, orbit radius ~11 for sides, ~13 for top
 const camSpline = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(  0, 4.5,  12),   // sp=0.0 front  (+Z) — COMING SOON
-  new THREE.Vector3( 12, 4.5,   0),   // sp=0.2 right  (+X) — CONNECT
-  new THREE.Vector3(  0, 4.5, -12),   // sp=0.4 back   (-Z) — SHARE SPOTS
-  new THREE.Vector3(-12, 4.5,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
-  new THREE.Vector3(  0, 14,    3),   // sp=0.8 top    (+Y) — FPV WORLD
-  new THREE.Vector3(  8, 6.5,  10),   // sp=1.0 CTA angle view
+  new THREE.Vector3(  0, 5.2,  13),   // sp=0.0 front  (+Z) — COMING SOON
+  new THREE.Vector3( 13, 5.2,   0),   // sp=0.2 right  (+X) — CONNECT
+  new THREE.Vector3(  0, 5.2, -13),   // sp=0.4 back   (-Z) — SHARE SPOTS
+  new THREE.Vector3(-13, 5.2,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
+  new THREE.Vector3(  0, 15,    3),   // sp=0.8 top    (+Y) — FPV WORLD
+  new THREE.Vector3(  9, 7.5,  11),   // sp=1.0 CTA angle view
 ]);
 
-// LookAt target spline — mostly at cube center, dips to look at top face from above
 const tgtSpline = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(0, CUBE_HALF, 0),
-  new THREE.Vector3(0, CUBE_HALF, 0),
-  new THREE.Vector3(0, CUBE_HALF, 0),
-  new THREE.Vector3(0, CUBE_HALF, 0),
-  new THREE.Vector3(0, CUBE_HALF + 1.5, 0),  // look at top face
-  new THREE.Vector3(0, CUBE_HALF, 0),
+  new THREE.Vector3(0, CUBE_Y, 0),
+  new THREE.Vector3(0, CUBE_Y, 0),
+  new THREE.Vector3(0, CUBE_Y, 0),
+  new THREE.Vector3(0, CUBE_Y, 0),
+  new THREE.Vector3(0, CUBE_Y + 1.2, 0),
+  new THREE.Vector3(0, CUBE_Y, 0),
 ]);
 
 // ─── FLOATING PARTICLES ─────────────────────────────────────────────────────
@@ -472,8 +552,8 @@ function ease(x) { return x < 0.5 ? 2*x*x : -1+(4-2*x)*x; }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 
 // Camera lerp targets
-let camPos = new THREE.Vector3(0, 4.5, 12);
-let camLookAt = new THREE.Vector3(0, CUBE_HALF, 0);
+let camPos = new THREE.Vector3(0, 5.2, 13);
+let camLookAt = new THREE.Vector3(0, CUBE_Y, 0);
 
 function tick() {
   requestAnimationFrame(tick);
@@ -513,6 +593,9 @@ function tick() {
   camera.position.copy(camPos);
   camera.lookAt(camLookAt);
 
+  // ── Terrain animate ──────────────────────────────────────────────────────
+  terrainMat.uniforms.uTime.value = t;
+
   // ── Edge glow pulse ──────────────────────────────────────────────────────
   edgeMat.opacity = 0.08 + Math.sin(t * 1.1) * 0.04;
 
@@ -522,7 +605,7 @@ function tick() {
   const dRadius = 7.5 + Math.sin(t * 0.21) * 1.5;
   drone.position.set(
     Math.sin(dT) * dRadius,
-    CUBE_HALF + 2.5 + Math.sin(t * 0.55) * 1.2,
+    CUBE_Y + 2.2 + Math.sin(t * 0.55) * 1.2,
     Math.cos(dT * 0.7) * dRadius
   );
   // Bank into the turn
