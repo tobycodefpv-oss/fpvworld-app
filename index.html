@@ -215,20 +215,61 @@ const TERR_VERT = `
 
 const TERR_FRAG = `
   varying vec2 vUv; varying float vH; uniform float uTime;
+
+  // A bolt shoots along one axis of the grid.
+  // axis: the uv coordinate along the bolt direction (0..1)
+  // cross: the uv coordinate perpendicular (snapped to nearest grid line)
+  // speed, offset, seed: timing variation
+  float bolt(float axis, float cross, float speed, float offset, float seed) {
+    // Only fire occasionally — use sawtooth with a short duty cycle
+    float t = fract(uTime * speed * 0.13 + seed);
+    float active = step(0.0, t) * step(t, 0.18); // fires 18% of the time
+    // Head position travels 0→1 during active window
+    float headPos = t / 0.18;
+    // Bright comet — sharp front, trailing fade
+    float dist = axis - headPos;
+    float comet = exp(max(dist, -0.18) * 55.0) * step(dist, 0.01);
+    // Snap to a grid line in the cross direction
+    float g = fract(cross * 38.0);
+    float onLine = 1.0 - smoothstep(0.0, 0.04, min(g, 1.0 - g));
+    return comet * onLine * active;
+  }
+
   void main(){
     vec2 g = fract(vUv * 38.0); float lw = 0.028;
     float lx = step(lw, g.x) * step(lw, 1.0 - g.x);
     float ly = step(lw, g.y) * step(lw, 1.0 - g.y);
     float grid = 1.0 - min(lx, ly);
+
     float h = clamp((vH + 3.5) / 7.0, 0.0, 1.0);
     vec3 lo = vec3(0.12, 0.30, 0.82);
     vec3 hi = vec3(0.18, 0.65, 0.95);
     vec3 col = mix(lo, hi, h);
+
+    // Base traveling pulse (gentle, always on)
     float pulse = sin(vUv.y * 55.0 - uTime * 4.5) * 0.5 + 0.5;
     col += pulse * 0.22 * hi;
-    float fade = 1.0 - smoothstep(0.55, 1.0, length(vUv - 0.5) * 2.0);
     col *= (1.8 + h * 0.8);
-    gl_FragColor = vec4(col, grid * fade);
+
+    // Lightning bolts — different speeds, directions, grid lines
+    vec3 boltCol = vec3(0.4, 0.75, 1.0);  // bright cyan-blue
+    float b = 0.0;
+    // Horizontal bolts (along U)
+    b += bolt(vUv.x, vUv.y, 1.00, 0.0,  0.13);
+    b += bolt(vUv.x, vUv.y, 0.73, 0.0,  0.47);
+    b += bolt(vUv.x, vUv.y, 1.41, 0.0,  0.81);
+    // Reverse horizontal
+    b += bolt(1.0 - vUv.x, vUv.y, 0.88, 0.0, 0.29);
+    b += bolt(1.0 - vUv.x, vUv.y, 1.20, 0.0, 0.65);
+    // Vertical bolts (along V)
+    b += bolt(vUv.y, vUv.x, 0.95, 0.0, 0.37);
+    b += bolt(vUv.y, vUv.x, 1.15, 0.0, 0.72);
+    b += bolt(1.0 - vUv.y, vUv.x, 0.80, 0.0, 0.55);
+
+    col += boltCol * b * 2.8;
+
+    float fade = 1.0 - smoothstep(0.55, 1.0, length(vUv - 0.5) * 2.0);
+    gl_FragColor = vec4(col, (grid + b * 0.8) * fade);
   }`;
 
 const terrUni = { uTime: { value: 0 } };
