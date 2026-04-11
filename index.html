@@ -202,10 +202,10 @@ const TERR_VERT = `
     // Plane is rotated -90deg on X, so local Z = world Y (up/down)
     // Displace p.z to get visible 3D waves from camera perspective
     float d = length(p.xy);
-    float wave = sin(p.x * 0.12 + uTime * 0.6) * cos(p.y * 0.09 + uTime * 0.4) * 3.2
-               + sin(p.x * 0.28 - uTime * 0.8) * 1.4
-               + cos(p.y * 0.20 + uTime * 0.55) * 1.8
-               + sin((p.x + p.y) * 0.15 - uTime * 0.7) * 1.0;
+    float wave = sin(p.x * 0.12 + uTime * 0.6) * cos(p.y * 0.09 + uTime * 0.4) * 1.0
+               + sin(p.x * 0.28 - uTime * 0.8) * 0.45
+               + cos(p.y * 0.20 + uTime * 0.55) * 0.6
+               + sin((p.x + p.y) * 0.15 - uTime * 0.7) * 0.32;
     // Flatten center where cube sits (radius ~8 units)
     float flatMask = smoothstep(3.0, 10.0, d);
     p.z += wave * flatMask;
