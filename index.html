@@ -123,10 +123,11 @@
 
   <div id="cta">
     <p>Be first to fly</p>
-    <div class="cta-form">
-      <input type="email" placeholder="your@email.com">
-      <button>Notify Me</button>
-    </div>
+    <form class="cta-form" action="https://formspree.io/f/meepygbl" method="POST">
+      <input type="hidden" name="_subject" value="FPV World – Waitlist">
+      <input type="email" name="email" placeholder="your@email.com" required>
+      <button type="submit">Notify Me</button>
+    </form>
   </div>
 </div>
 
