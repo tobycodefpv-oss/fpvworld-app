@@ -430,7 +430,7 @@ scene.add(terrain);
 //   sp≈0.80 → camera at (0, 12, 3):     sees +Y (mat[2]) — FPV WORLD
 //   sp≈1.00 → camera at (8, 6, 9):      angled view — CTA
 
-function makeFace({ bg = '#f2efe8', lines = [], size = 512 }) {
+function makeFace({ bg = '#f2efe8', lines = [], size = 512, topLabel = null }) {
   const cv = document.createElement('canvas');
   cv.width = size; cv.height = size;
   const ctx = cv.getContext('2d');
@@ -458,6 +458,15 @@ function makeFace({ bg = '#f2efe8', lines = [], size = 512 }) {
   ].forEach(([x1,y1,x2,y2,x3,y3]) => {
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.stroke();
   });
+
+  // Optional top label — drawn near top, outside centered block
+  if (topLabel) {
+    ctx.font = `700 ${topLabel.size || 36}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = topLabel.color || 'rgba(26,17,8,0.38)';
+    ctx.fillText(topLabel.text, size / 2, 80);
+  }
 
   // Text layout
   const GAP = 10;
@@ -525,12 +534,14 @@ const cubeMaterials = [
   new THREE.MeshStandardMaterial({ color: 0x1a1108, roughness: 0.5, metalness: 0 }),
 
   // [4] +Z front — COMING SOON (first view, sp≈0.00)
-  new THREE.MeshStandardMaterial({ map: makeFace({ lines: [
-    { text: 'FPV WORLD', role: 'label', size: 48, color: 'rgba(26,17,8,0.45)' },
-    { text: 'COMING',    role: 'main',  size: 96 },
-    { text: 'SOON',      role: 'main',  size: 96 },
-    { text: '2026',      role: 'sub',   size: 28  },
-  ]}), roughness: 0.08, metalness: 0.02 }),
+  new THREE.MeshStandardMaterial({ map: makeFace({
+    topLabel: { text: 'FPV WORLD', size: 36, color: 'rgba(26,17,8,0.38)' },
+    lines: [
+      { text: 'COMING', role: 'main', size: 96 },
+      { text: 'SOON',   role: 'main', size: 96 },
+      { text: '2026',   role: 'sub',  size: 28  },
+    ]
+  }), roughness: 0.08, metalness: 0.02 }),
 
   // [5] -Z back — SHARE SPOTS (seen from behind, sp≈0.40)
   new THREE.MeshStandardMaterial({ map: makeFace({ bg: '#0f0e0c', lines: [
