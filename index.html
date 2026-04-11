@@ -6,97 +6,94 @@
 <title>FPV World</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #f4f1ed; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+  html, body { background: #f2efe8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
 
   #canvas-wrapper { position: fixed; inset: 0; z-index: 0; }
   #canvas-wrapper canvas { display: block; }
 
   #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 
-  /* Logo */
   #logo {
-    position: absolute;
-    top: 32px; left: 40px;
+    position: absolute; top: 32px; left: 40px;
     font-size: 12px; font-weight: 700;
     letter-spacing: 0.28em; text-transform: uppercase;
-    color: #0a0a0a; opacity: 0.35;
+    color: #1a1108; opacity: 0.32;
   }
 
   /* Chapter dots */
   #dots {
-    position: absolute;
-    bottom: 36px; left: 50%;
-    transform: translateX(-50%);
-    display: flex; gap: 10px; align-items: center;
+    position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center;
   }
   .dot {
     width: 6px; height: 6px; border-radius: 50%;
-    background: rgba(10,10,10,0.18);
-    transition: background 0.4s, transform 0.4s;
+    background: rgba(26,17,8,0.2);
+    transition: background 0.5s, transform 0.5s;
   }
-  .dot.active { background: #ff4800; transform: scale(1.4); }
+  .dot.active { background: #ff4800; transform: scale(1.5); }
+
+  /* Chapter label */
+  #chapter-label {
+    position: absolute;
+    bottom: 66px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.3em;
+    text-transform: uppercase; color: #ff4800;
+    opacity: 0; transition: opacity 0.6s;
+    white-space: nowrap;
+  }
+  #chapter-label.visible { opacity: 1; }
 
   /* Progress bar */
   #progress-bar {
     position: absolute; bottom: 0; left: 0;
     height: 2px; width: 0%;
-    background: #ff4800;
-    transition: width 0.08s linear;
+    background: #ff4800; transition: width 0.08s linear;
   }
 
   /* Scroll hint */
   #scroll-hint {
-    position: absolute;
-    bottom: 56px; left: 50%;
-    transform: translateX(-50%);
+    position: absolute; bottom: 58px; right: 44px;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
     opacity: 1; transition: opacity 0.8s;
   }
   #scroll-hint.hidden { opacity: 0; }
   #scroll-hint span {
-    font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
-    color: #0a0a0a; opacity: 0.38;
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: #1a1108; opacity: 0.35;
   }
   .arrow-line {
-    width: 1px; height: 28px;
+    width: 1px; height: 26px;
     background: linear-gradient(to bottom, #ff4800, transparent);
     animation: pulse 1.8s ease-in-out infinite;
   }
   @keyframes pulse { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
 
-  /* CTA overlay — last chapter */
+  /* CTA */
   #cta {
-    position: absolute;
-    bottom: 80px; left: 50%; transform: translateX(-50%);
-    text-align: center;
-    opacity: 0; transition: opacity 0.8s;
-    pointer-events: none;
-    white-space: nowrap;
+    position: absolute; bottom: 76px; left: 50%; transform: translateX(-50%);
+    text-align: center; opacity: 0; transition: opacity 0.7s;
+    pointer-events: none; white-space: nowrap;
   }
   #cta.visible { opacity: 1; pointer-events: auto; }
   #cta p {
-    font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
-    color: #0a0a0a; opacity: 0.42; margin-bottom: 16px;
+    font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase;
+    color: #1a1108; opacity: 0.42; margin-bottom: 14px;
   }
   .cta-form { display: flex; }
   .cta-form input[type="email"] {
-    flex: 1; padding: 13px 16px;
-    border: 1.5px solid rgba(10,10,10,0.3); border-right: none;
-    background: rgba(244,241,237,0.9);
-    font-size: 13px; letter-spacing: 0.04em; color: #0a0a0a; outline: none;
-    backdrop-filter: blur(6px);
-    width: 220px;
+    flex: 1; padding: 12px 16px; border: 1.5px solid rgba(26,17,8,0.28);
+    border-right: none; background: rgba(242,239,232,0.88);
+    font-size: 13px; color: #1a1108; outline: none; width: 210px;
   }
-  .cta-form input::placeholder { color: #0a0a0a; opacity: 0.3; }
+  .cta-form input::placeholder { color: #1a1108; opacity: 0.3; }
   .cta-form button {
-    padding: 13px 20px; background: #ff4800; color: #fff;
+    padding: 12px 18px; background: #ff4800; color: #fff;
     border: 1.5px solid #ff4800;
     font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
     cursor: pointer; transition: background 0.2s;
   }
-  .cta-form button:hover { background: #0a0a0a; border-color: #0a0a0a; }
+  .cta-form button:hover { background: #1a1108; border-color: #1a1108; }
 
-  /* 600vh scroll space */
   #scroll-space { height: 600vh; pointer-events: none; }
 </style>
 </head>
@@ -108,11 +105,13 @@
   <div id="logo">FPV World</div>
 
   <div id="dots">
-    <div class="dot active" id="dot0"></div>
+    <div class="dot" id="dot0"></div>
     <div class="dot" id="dot1"></div>
     <div class="dot" id="dot2"></div>
     <div class="dot" id="dot3"></div>
+    <div class="dot" id="dot4"></div>
   </div>
+  <div id="chapter-label"></div>
 
   <div id="progress-bar"></div>
 
@@ -132,7 +131,6 @@
 
 <div id="scroll-space"></div>
 
-<!-- Plain scroll tracker — never inside module -->
 <script>
   window._sp = 0;
   window.addEventListener('scroll', function() {
@@ -149,14 +147,18 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0xf4f1ed, 1);
+renderer.setClearColor(0xf2efe8, 1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.1;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0xf2efe8, 0.024);
+
 const camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 0.1, 200);
-camera.position.set(0, 0, 11);
+camera.position.set(0, 4.5, 11);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -165,87 +167,120 @@ window.addEventListener('resize', () => {
 });
 
 // ─── LIGHTS ─────────────────────────────────────────────────────────────────
-const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+const ambient = new THREE.AmbientLight(0xfff5e8, 0.55);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight(0xfff8f2, 2.8);
-keyLight.position.set(7, 12, 10);
+const keyLight = new THREE.DirectionalLight(0xfff8f0, 2.5);
+keyLight.position.set(10, 18, 10);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width  = 1024;
+keyLight.shadow.mapSize.height = 1024;
+keyLight.shadow.camera.near    = 1;
+keyLight.shadow.camera.far     = 50;
+keyLight.shadow.camera.left    = -12;
+keyLight.shadow.camera.right   = 12;
+keyLight.shadow.camera.top     = 12;
+keyLight.shadow.camera.bottom  = -12;
+keyLight.shadow.bias = -0.0003;
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0xff4800, 0.45);
-fillLight.position.set(-10, -3, 5);
+const fillLight = new THREE.DirectionalLight(0xff8040, 0.38);
+fillLight.position.set(-12, 4, 6);
 scene.add(fillLight);
 
-const rimLight = new THREE.DirectionalLight(0xfff0e0, 0.7);
-rimLight.position.set(0, -8, -12);
+const rimLight = new THREE.DirectionalLight(0xfff0d8, 0.55);
+rimLight.position.set(2, -6, -14);
 scene.add(rimLight);
 
-// ─── FACE TEXTURE BUILDER ────────────────────────────────────────────────────
-// BoxGeometry face order: +X(0), -X(1), +Y(2), -Y(3), +Z(4), -Z(5)
-//
-// Camera looks along -Z. Face toward camera at rotation Y=0: +Z (index 4)
-//   Y = 0:     +Z face front  → Ch 0
-//   Y = -PI/2: +X face front  → Ch 1
-//   Y = -PI:   -Z face front  → Ch 2
-//   Y = -3PI/2 (=-PI/2 equiv): -X face front → Ch 3
-//
-// So:
-//   material[4] (+Z) = Ch 0  COMING SOON
-//   material[0] (+X) = Ch 1  CONNECT
-//   material[5] (-Z) = Ch 2  SHARE SPOTS
-//   material[1] (-X) = Ch 3  JOIN THE LIST
-//   material[2] (+Y) = top   FPV logo
-//   material[3] (-Y) = bottom .APP
+// ─── GRID FLOOR ─────────────────────────────────────────────────────────────
+// GridHelper: size, divisions, center-line color, grid-line color
+const grid = new THREE.GridHelper(60, 60, 0xb8a88a, 0xd8d0c4);
+grid.position.y = 0;
+scene.add(grid);
 
-const CHAPTERS = 4;
+// Shadow receiver (transparent plane that shows only the shadow)
+const shadowReceiver = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30),
+  new THREE.ShadowMaterial({ opacity: 0.14 })
+);
+shadowReceiver.rotation.x = -Math.PI / 2;
+shadowReceiver.position.y = 0.001;
+shadowReceiver.receiveShadow = true;
+scene.add(shadowReceiver);
 
-function makeFace({ bg = '#f4f1ed', lines = [], size = 512 }) {
+// ─── CUBE FACE TEXTURES ──────────────────────────────────────────────────────
+// BoxGeometry face order: +X(0) -X(1) +Y(2) -Y(3) +Z(4) -Z(5)
+//
+// Camera orbits starting from +Z front:
+//   sp≈0.00 → camera at (0, 4.5, 11):   sees +Z (mat[4]) — COMING SOON
+//   sp≈0.20 → camera at (11, 4.5, 0):   sees +X (mat[0]) — CONNECT
+//   sp≈0.40 → camera at (0, 4.5, -11):  sees -Z (mat[5]) — SHARE SPOTS
+//   sp≈0.60 → camera at (-11, 4.5, 0):  sees -X (mat[1]) — FLY TOGETHER
+//   sp≈0.80 → camera at (0, 12, 3):     sees +Y (mat[2]) — FPV WORLD
+//   sp≈1.00 → camera at (8, 6, 9):      angled view — CTA
+
+function makeFace({ bg = '#f2efe8', lines = [], size = 512 }) {
   const cv = document.createElement('canvas');
   cv.width = size; cv.height = size;
   const ctx = cv.getContext('2d');
 
+  // Background
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
 
   // Thin border
-  ctx.strokeStyle = 'rgba(10,10,10,0.1)';
+  const isDark = bg === '#0f0e0c';
+  const isOrange = bg === '#ff4800';
+  ctx.strokeStyle = isDark ? 'rgba(255,72,0,0.3)' : isOrange ? 'rgba(255,255,255,0.25)' : 'rgba(26,17,8,0.1)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(22, 22, size - 44, size - 44);
+  ctx.strokeRect(24, 24, size-48, size-48);
 
   // Corner brackets
-  const co = 26, cl = 40;
-  ctx.strokeStyle = '#ff4800';
-  ctx.lineWidth = 2.5;
-  [[co, co, co+cl, co, co, co+cl],
-   [size-co-cl, co, size-co, co, size-co, co+cl],
-   [co, size-co-cl, co, size-co, co+cl, size-co],
-   [size-co-cl, size-co, size-co, size-co, size-co, size-co-cl]
+  const co = 28, cl = 44;
+  ctx.strokeStyle = isDark ? '#ff4800' : isOrange ? 'rgba(255,255,255,0.6)' : '#ff4800';
+  ctx.lineWidth = 3;
+  [
+    [co, co+cl, co, co, co+cl, co],
+    [size-co-cl, co, size-co, co, size-co, co+cl],
+    [co, size-co-cl, co, size-co, co+cl, size-co],
+    [size-co-cl, size-co, size-co, size-co, size-co, size-co-cl]
   ].forEach(([x1,y1,x2,y2,x3,y3]) => {
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.stroke();
   });
 
-  // Compute layout
-  const gap = 12;
-  const totalH = lines.reduce((s, l, i) => s + l.size + (i < lines.length-1 ? gap : 0), 0);
+  // Text layout
+  const GAP = 10;
+  let totalH = lines.reduce((s, l, i) => s + l.size + (i < lines.length-1 ? GAP : 0), 0);
   let y = (size - totalH) / 2 + lines[0].size * 0.82;
 
   lines.forEach((l, i) => {
-    const weight = l.weight || (l.role === 'main' ? '800' : l.role === 'label' ? '700' : '500');
+    const weight = l.role === 'main' ? '800' : l.role === 'label' ? '700' : '500';
     ctx.font = `${weight} ${l.size}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
 
+    let col;
+    if (l.color) {
+      col = l.color;
+    } else if (isOrange) {
+      col = l.role === 'sub' ? 'rgba(255,255,255,0.65)' : '#ffffff';
+    } else if (isDark) {
+      col = l.role === 'sub' ? 'rgba(255,255,255,0.38)' : '#ff4800';
+    } else {
+      col = l.role === 'sub' ? 'rgba(26,17,8,0.38)' : '#ff4800';
+    }
+
     if (l.role === 'main') {
-      ctx.shadowColor = l.color || '#ff4800';
-      ctx.shadowBlur = 24;
+      ctx.shadowColor = isOrange ? 'rgba(255,255,255,0.4)' : '#ff4800';
+      ctx.shadowBlur = 28;
     } else {
       ctx.shadowBlur = 0;
     }
-    ctx.fillStyle = l.color || (l.role === 'main' ? '#ff4800' : l.role === 'label' ? '#0a0a0a' : 'rgba(10,10,10,0.36)');
-    ctx.fillText(l.text, size / 2, y);
+    ctx.fillStyle = col;
+    ctx.fillText(l.text, size/2, y);
     ctx.shadowBlur = 0;
 
-    if (i < lines.length - 1) y += l.size + gap;
+    if (i < lines.length-1) y += l.size + GAP;
   });
 
   const tex = new THREE.CanvasTexture(cv);
@@ -253,135 +288,132 @@ function makeFace({ bg = '#f4f1ed', lines = [], size = 512 }) {
   return tex;
 }
 
-// Chapter face definitions
-const faceDefs = [
-  // [4] +Z — Ch 0: COMING SOON
-  { bg: '#f4f1ed', lines: [
-    { text: 'FPV WORLD', role: 'label', size: 52 },
-    { text: 'COMING', role: 'main', size: 130 },
-    { text: 'SOON',   role: 'main', size: 130 },
-    { text: '2025', role: 'sub', size: 28 },
-  ]},
-  // [0] +X — Ch 1: CONNECT
-  { bg: '#f4f1ed', lines: [
+// Material array in BoxGeometry order: [+X, -X, +Y, -Y, +Z, -Z]
+const cubeMaterials = [
+  // [0] +X — CONNECT (seen from right, sp≈0.20)
+  new THREE.MeshStandardMaterial({ map: makeFace({ lines: [
     { text: 'CONNECT', role: 'main', size: 118 },
     { text: 'Find pilots near you', role: 'sub', size: 30 },
-  ]},
-  // [5] -Z — Ch 2: SHARE SPOTS
-  { bg: '#0a0a0a', lines: [
-    { text: 'SHARE',  role: 'main', size: 128 },
-    { text: 'SPOTS',  role: 'main', size: 128 },
-    { text: 'Discover the best fly locations', role: 'sub', size: 26, color: 'rgba(255,255,255,0.4)' },
-  ]},
-  // [1] -X — Ch 3: JOIN
-  { bg: '#ff4800', lines: [
-    { text: 'JOIN', role: 'main', size: 148, color: '#ffffff' },
-    { text: 'THE LIST', role: 'label', size: 54, color: 'rgba(255,255,255,0.85)' },
-    { text: 'fpvworld.app', role: 'sub', size: 28, color: 'rgba(255,255,255,0.55)' },
-  ]},
-  // [2] +Y top
-  { bg: '#0a0a0a', lines: [
-    { text: 'FPV', role: 'main', size: 120 },
-    { text: 'WORLD', role: 'main', size: 120 },
-  ]},
-  // [3] -Y bottom
-  { bg: '#ff4800', lines: [
-    { text: '.APP', role: 'main', size: 148, color: '#ffffff' },
-  ]},
+  ]}), roughness: 0.08, metalness: 0.02 }),
+
+  // [1] -X — FLY TOGETHER (seen from left, sp≈0.60)
+  new THREE.MeshStandardMaterial({ map: makeFace({ bg: '#ff4800', lines: [
+    { text: 'FLY',      role: 'main', size: 136 },
+    { text: 'TOGETHER', role: 'main', size: 86 },
+    { text: 'Join the community', role: 'sub', size: 28 },
+  ]}), roughness: 0.08, metalness: 0.02 }),
+
+  // [2] +Y top — FPV WORLD (seen from above, sp≈0.80)
+  new THREE.MeshStandardMaterial({ map: makeFace({ bg: '#0f0e0c', lines: [
+    { text: 'FPV',   role: 'main', size: 142 },
+    { text: 'WORLD', role: 'main', size: 142 },
+  ]}), roughness: 0.08, metalness: 0.02 }),
+
+  // [3] -Y bottom — never visible (on the ground)
+  new THREE.MeshStandardMaterial({ color: 0x1a1108, roughness: 0.5, metalness: 0 }),
+
+  // [4] +Z front — COMING SOON (first view, sp≈0.00)
+  new THREE.MeshStandardMaterial({ map: makeFace({ lines: [
+    { text: 'FPV WORLD', role: 'label', size: 48, color: 'rgba(26,17,8,0.45)' },
+    { text: 'COMING',    role: 'main',  size: 128 },
+    { text: 'SOON',      role: 'main',  size: 128 },
+    { text: '2025',      role: 'sub',   size: 28  },
+  ]}), roughness: 0.08, metalness: 0.02 }),
+
+  // [5] -Z back — SHARE SPOTS (seen from behind, sp≈0.40)
+  new THREE.MeshStandardMaterial({ map: makeFace({ bg: '#0f0e0c', lines: [
+    { text: 'SHARE',  role: 'main', size: 136 },
+    { text: 'SPOTS',  role: 'main', size: 136 },
+    { text: 'Discover fly locations', role: 'sub', size: 28, color: 'rgba(255,255,255,0.36)' },
+  ]}), roughness: 0.08, metalness: 0.02 }),
 ];
 
-// Build materials in BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
-// Map: [0]=+X=Ch1, [1]=-X=Ch3, [2]=+Y=top, [3]=-Y=bottom, [4]=+Z=Ch0, [5]=-Z=Ch2
-const matOrder = [1, 3, 4, 5, 0, 2]; // index into faceDefs for each material slot
-const materials = matOrder.map(i =>
-  new THREE.MeshStandardMaterial({
-    map: makeFace(faceDefs[i]),
-    roughness: 0.07,
-    metalness: 0.02,
-  })
-);
-
-const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), materials);
+// Cube sits on floor — center at y = half of height = 2.2
+const CUBE_HALF = 2.2;
+const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), cubeMaterials);
+cube.position.y = CUBE_HALF;
+cube.castShadow = true;
 scene.add(cube);
 
 // Edge wireframe
-const edgesMat = new THREE.LineBasicMaterial({
-  color: 0xff4800, transparent: true, opacity: 0.14,
+const edgeMat = new THREE.LineBasicMaterial({
+  color: 0xff4800, transparent: true, opacity: 0.12,
   blending: THREE.AdditiveBlending, depthWrite: false,
 });
-const edgesMesh = new THREE.LineSegments(
+const edgeMesh = new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(4.42, 4.42, 4.42)),
-  edgesMat
+  edgeMat
 );
-scene.add(edgesMesh);
+edgeMesh.position.y = CUBE_HALF;
+scene.add(edgeMesh);
 
-// ─── PARTICLES ───────────────────────────────────────────────────────────────
-const N = 200;
+// ─── CAMERA SPLINE ──────────────────────────────────────────────────────────
+// 6 waypoints → camera visits all 5 visible faces in order, ends at angled CTA view
+// Cube center at y=2.2, orbit radius ~11 for sides, ~13 for top
+const camSpline = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(  0, 4.5,  12),   // sp=0.0 front  (+Z) — COMING SOON
+  new THREE.Vector3( 12, 4.5,   0),   // sp=0.2 right  (+X) — CONNECT
+  new THREE.Vector3(  0, 4.5, -12),   // sp=0.4 back   (-Z) — SHARE SPOTS
+  new THREE.Vector3(-12, 4.5,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
+  new THREE.Vector3(  0, 14,    3),   // sp=0.8 top    (+Y) — FPV WORLD
+  new THREE.Vector3(  8, 6.5,  10),   // sp=1.0 CTA angle view
+]);
+
+// LookAt target spline — mostly at cube center, dips to look at top face from above
+const tgtSpline = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0, CUBE_HALF, 0),
+  new THREE.Vector3(0, CUBE_HALF, 0),
+  new THREE.Vector3(0, CUBE_HALF, 0),
+  new THREE.Vector3(0, CUBE_HALF, 0),
+  new THREE.Vector3(0, CUBE_HALF + 1.5, 0),  // look at top face
+  new THREE.Vector3(0, CUBE_HALF, 0),
+]);
+
+// ─── FLOATING PARTICLES ─────────────────────────────────────────────────────
+const N = 160;
 const pArr = new Float32Array(N * 3);
 const pMeta = Array.from({ length: N }, () => ({
   theta: Math.random() * Math.PI * 2,
-  phi: Math.acos(2 * Math.random() - 1),
-  r: 5.5 + Math.random() * 7,
-  spd: (Math.random() - 0.5) * 0.2,
+  phi: Math.PI * 0.2 + Math.random() * Math.PI * 0.5,  // upper hemisphere
+  r: 6 + Math.random() * 8,
+  spd: (Math.random() - 0.5) * 0.18,
   drift: Math.random() * Math.PI * 2,
+  y0: CUBE_HALF,
 }));
 pMeta.forEach((m, i) => {
   pArr[i*3]   = m.r * Math.sin(m.phi) * Math.cos(m.theta);
-  pArr[i*3+1] = m.r * Math.cos(m.phi);
+  pArr[i*3+1] = m.y0 + m.r * Math.cos(m.phi);
   pArr[i*3+2] = m.r * Math.sin(m.phi) * Math.sin(m.theta);
 });
 const pGeo = new THREE.BufferGeometry();
 pGeo.setAttribute('position', new THREE.BufferAttribute(pArr, 3));
 const pMat = new THREE.PointsMaterial({
-  color: 0xff4800, size: 0.05, transparent: true, opacity: 0.45,
+  color: 0xff4800, size: 0.055, transparent: true, opacity: 0.4,
   sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending,
 });
 const ptcls = new THREE.Points(pGeo, pMat);
 scene.add(ptcls);
 
 // ─── UI REFS ─────────────────────────────────────────────────────────────────
-const progressBar = document.getElementById('progress-bar');
-const scrollHint  = document.getElementById('scroll-hint');
-const ctaEl       = document.getElementById('cta');
-const dots        = [0,1,2,3].map(i => document.getElementById('dot' + i));
+const progressBar   = document.getElementById('progress-bar');
+const scrollHint    = document.getElementById('scroll-hint');
+const ctaEl         = document.getElementById('cta');
+const chapterLabel  = document.getElementById('chapter-label');
+const dots          = [0,1,2,3,4].map(i => document.getElementById('dot' + i));
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const CHAPTER_NAMES = ['COMING SOON', 'CONNECT', 'SHARE SPOTS', 'FLY TOGETHER', 'FPV WORLD'];
+
+// ─── TICK ────────────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+let smoothP = 0;
+let lastChapter = -1;
+
 function ease(x) { return x < 0.5 ? 2*x*x : -1+(4-2*x)*x; }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 
-// Chapter layout per progress unit 0.25
-// Within each chapter's local t (0→1):
-//   0.00 → 0.22 : zoom IN  (far → close)
-//   0.22 → 0.64 : HOLD close (reading the face)
-//   0.64 → 0.82 : zoom OUT (close → far)
-//   0.82 → 1.00 : ROTATE cube to next face
-const FAR   = 11;    // camera z when zoomed out
-const CLOSE = 2.85;  // camera z when face fills view
-
-const PHASE_IN_END  = 0.22;
-const PHASE_HOLD_END= 0.64;
-const PHASE_OUT_END = 0.82;
-// 0.82 → 1.00: rotate
-
-function getCameraZ(localT) {
-  if (localT < PHASE_IN_END) {
-    return FAR - ease(localT / PHASE_IN_END) * (FAR - CLOSE);
-  } else if (localT < PHASE_HOLD_END) {
-    return CLOSE;
-  } else if (localT < PHASE_OUT_END) {
-    return CLOSE + ease((localT - PHASE_HOLD_END) / (PHASE_OUT_END - PHASE_HOLD_END)) * (FAR - CLOSE);
-  } else {
-    return FAR;
-  }
-}
-
-// ─── ANIMATION LOOP ──────────────────────────────────────────────────────────
-const clock = new THREE.Clock();
-let smoothP = 0;
-
-// Cube starts with +Z face toward camera (Y=0), slight X tilt for depth
-let cubeRotY = 0;
-let cubeRotX = 0.18; // permanent slight downward tilt
+// Camera lerp targets
+let camPos = new THREE.Vector3(0, 4.5, 12);
+let camLookAt = new THREE.Vector3(0, CUBE_HALF, 0);
 
 function tick() {
   requestAnimationFrame(tick);
@@ -391,73 +423,49 @@ function tick() {
   const sp = Math.min(smoothP, 0.9999);
 
   progressBar.style.width = (sp * 100).toFixed(1) + '%';
+  scrollHint.classList.toggle('hidden', sp > 0.04);
 
-  // ── Chapter breakdown ────────────────────────────────────────────────────
-  const chSize = 1.0 / CHAPTERS;
-  const chIdx  = Math.min(Math.floor(sp / chSize), CHAPTERS - 1);
-  const localT = clamp01((sp - chIdx * chSize) / chSize);
-
-  // Update chapter dots
+  // ── Chapter for UI ───────────────────────────────────────────────────────
+  // Each chapter occupies 0.2 of scroll (5 chapters + end)
+  // Chapter transitions at sp: 0.1, 0.3, 0.5, 0.7, 0.9
+  const chIdx = Math.min(Math.floor(sp / 0.2), 4);
   dots.forEach((d, i) => d.classList.toggle('active', i === chIdx));
 
-  // Scroll hint: hide after 5%
-  scrollHint.classList.toggle('hidden', sp > 0.05);
-
-  // CTA: show during last chapter hold phase
-  const isLastCh = chIdx === CHAPTERS - 1;
-  ctaEl.classList.toggle('visible', isLastCh && localT > 0.22 && localT < 0.88);
-
-  // ── Camera ───────────────────────────────────────────────────────────────
-  const camZ = getCameraZ(localT);
-
-  // Slight drift only when far (not when close — be still when reading)
-  const farness = clamp01((camZ - CLOSE) / (FAR - CLOSE));
-  camera.position.set(
-    Math.sin(t * 0.13) * 0.4 * farness,
-    Math.cos(t * 0.09) * 0.18 * farness,
-    camZ
-  );
-  camera.lookAt(0, 0, 0);
-
-  // ── Cube rotation ────────────────────────────────────────────────────────
-  // Target Y for this chapter: each chapter rotates -90° (quarter turn)
-  const targetY = -chIdx * Math.PI * 0.5;
-
-  if (localT >= PHASE_OUT_END && chIdx < CHAPTERS - 1) {
-    // Rotation phase: interpolate toward next chapter's target Y
-    const rotT = ease((localT - PHASE_OUT_END) / (1 - PHASE_OUT_END));
-    const nextTargetY = -(chIdx + 1) * Math.PI * 0.5;
-    cubeRotY = THREE.MathUtils.lerp(targetY, nextTargetY, rotT);
-  } else {
-    // Snap back to exact target (smooth lerp keeps it precise)
-    cubeRotY += (targetY - cubeRotY) * 0.09;
+  if (chIdx !== lastChapter) {
+    chapterLabel.textContent = CHAPTER_NAMES[chIdx];
+    chapterLabel.classList.remove('visible');
+    setTimeout(() => chapterLabel.classList.add('visible'), 50);
+    lastChapter = chIdx;
   }
 
-  // X tilt: during rotation, tilt more for a dynamic tumble feel
-  const rotPhase = localT >= PHASE_OUT_END ? (localT - PHASE_OUT_END) / (1 - PHASE_OUT_END) : 0;
-  const xTiltBoost = Math.sin(rotPhase * Math.PI) * 0.12;
-  cubeRotX += (0.18 + xTiltBoost - cubeRotX) * 0.06;
+  // CTA: last 20% of scroll
+  ctaEl.classList.toggle('visible', sp > 0.88);
+  if (sp > 0.88) chapterLabel.classList.remove('visible');
 
-  // Subtle float
-  cube.position.y = Math.sin(t * 0.5) * 0.08;
-  cube.rotation.set(cubeRotX, cubeRotY, 0);
+  // ── Camera follows spline ────────────────────────────────────────────────
+  const targetCamPos  = camSpline.getPoint(sp);
+  const targetLookAt  = tgtSpline.getPoint(sp);
 
-  edgesMesh.rotation.copy(cube.rotation);
-  edgesMesh.position.copy(cube.position);
-  edgesMat.opacity = 0.10 + Math.sin(t * 1.2) * 0.04;
+  // Smooth lerp — 0.07 is the sweet spot (not jerky, not laggy)
+  camPos.lerp(targetCamPos, 0.07);
+  camLookAt.lerp(targetLookAt, 0.07);
 
-  // ── Particles ────────────────────────────────────────────────────────────
+  camera.position.copy(camPos);
+  camera.lookAt(camLookAt);
+
+  // ── Edge glow pulse ──────────────────────────────────────────────────────
+  edgeMat.opacity = 0.08 + Math.sin(t * 1.1) * 0.04;
+
+  // ── Particles orbit cube ─────────────────────────────────────────────────
   const pa = ptcls.geometry.attributes.position;
   for (let i = 0; i < N; i++) {
     const m = pMeta[i];
-    m.theta += m.spd * 0.009;
-    pa.array[i*3]   = m.r * Math.sin(m.phi) * Math.cos(m.theta + t * 0.03);
-    pa.array[i*3+1] = m.r * Math.cos(m.phi) + Math.sin(t * 0.25 + m.drift) * 0.3;
-    pa.array[i*3+2] = m.r * Math.sin(m.phi) * Math.sin(m.theta + t * 0.03);
+    m.theta += m.spd * 0.008;
+    pa.array[i*3]   = m.r * Math.sin(m.phi) * Math.cos(m.theta + t * 0.025);
+    pa.array[i*3+1] = m.y0 + m.r * Math.cos(m.phi) + Math.sin(t*0.22 + m.drift) * 0.28;
+    pa.array[i*3+2] = m.r * Math.sin(m.phi) * Math.sin(m.theta + t * 0.025);
   }
   pa.needsUpdate = true;
-  // Fade out particles when camera is close
-  pMat.opacity = 0.45 * clamp01((camZ - CLOSE) / (FAR - CLOSE) * 2);
 
   renderer.render(scene, camera);
 }
