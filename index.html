@@ -25,6 +25,11 @@
     position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 12px; align-items: center;
   }
+  @media (max-width: 767px) {
+    #dots { bottom: 60px; }
+    #chapter-label { bottom: 90px; }
+    #legal-links { bottom: 36px; left: 50%; transform: translateX(-50%); }
+  }
   .dot {
     width: 6px; height: 6px; border-radius: 50%;
     background: rgba(26,17,8,0.2);
