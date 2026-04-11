@@ -261,7 +261,7 @@ const TERR_FRAG = `
     float d4 = vUv.y - head4;
     b += exp(d4 * 55.0) * step(d4, 0.005) * line4;
 
-    col += boltCol * b * 4.0;
+    col += boltCol * b * 1.4;
 
     float fade = 1.0 - smoothstep(0.55, 1.0, length(vUv - 0.5) * 2.0);
     gl_FragColor = vec4(col, (grid + b * 0.9) * fade);
