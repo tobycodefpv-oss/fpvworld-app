@@ -193,79 +193,49 @@ rimLight.position.set(2, -6, -14);
 scene.add(rimLight);
 
 // ─── WAVE TERRAIN ────────────────────────────────────────────────────────────
-// Animated wave landscape — hill in center where cube sits
-// Color: minimal grey-white with very subtle blue grid lines + traveling pulse
-const terrainMat = new THREE.ShaderMaterial({
-  uniforms: { uTime: { value: 0 } },
-  vertexShader: `
-    uniform float uTime;
-    varying vec2 vUv;
-    varying float vH;
-    void main() {
-      vUv = uv;
-      vec3 pos = position;
-      float d = length(pos.xz);
+// Horizontal plane, Y-displacement waves — same pattern as original first build
+// AdditiveBlending: grid lines glow ON TOP of background color
+const TERR_VERT = `
+  varying vec2 vUv; varying float vH; uniform float uTime;
+  void main(){
+    vUv = uv; vec3 p = position;
+    p.y += sin(p.x * 0.12 + uTime * 0.6) * cos(p.z * 0.09 + uTime * 0.4) * 2.8
+          + sin(p.x * 0.25 - uTime * 0.8) * 1.2
+          + cos(p.z * 0.18 + uTime * 0.5) * 1.6;
+    vH = p.y;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }`;
 
-      // Central hill — small flat platform, cube sits on it
-      float hill = 0.4 * exp(-d * d * 0.12);
+const TERR_FRAG = `
+  varying vec2 vUv; varying float vH; uniform float uTime;
+  void main(){
+    vec2 g = fract(vUv * 38.0); float lw = 0.028;
+    float lx = step(lw, g.x) * step(lw, 1.0 - g.x);
+    float ly = step(lw, g.y) * step(lw, 1.0 - g.y);
+    float grid = 1.0 - min(lx, ly);
+    float h = clamp((vH + 3.5) / 7.0, 0.0, 1.0);
+    vec3 lo = vec3(0.12, 0.30, 0.82);
+    vec3 hi = vec3(0.18, 0.65, 0.95);
+    vec3 col = mix(lo, hi, h);
+    float pulse = sin(vUv.y * 55.0 - uTime * 4.5) * 0.5 + 0.5;
+    col += pulse * 0.22 * hi;
+    float fade = 1.0 - smoothstep(0.55, 1.0, length(vUv - 0.5) * 2.0);
+    col *= (1.8 + h * 0.8);
+    gl_FragColor = vec4(col, grid * fade);
+  }`;
 
-      // Traveling waves radiating outward — large amplitude, very visible from side
-      float wave =
-        sin(pos.x * 0.65 + uTime * 1.0) * cos(pos.z * 0.55 + uTime * 0.75) * 2.8
-      + sin(pos.x * 1.3  - uTime * 0.65) * sin(pos.z * 1.1 + uTime * 0.85) * 1.4
-      + cos(pos.x * 0.36 + uTime * 0.45) * cos(pos.z * 0.40 - uTime * 0.55) * 1.8
-      + sin((pos.x + pos.z) * 0.50 - uTime * 1.2) * 0.9;
-
-      // Waves dampen at center so hill is clean
-      float waveMask = smoothstep(0.0, 6.0, d);
-      pos.y = hill + wave * waveMask;
-      vH = pos.y / 4.5;  // normalize for color
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform float uTime;
-    varying vec2 vUv;
-    varying float vH;
-    void main() {
-      // Base: light grey-blue — clearly visible against white bg
-      vec3 lo = vec3(0.78, 0.82, 0.88);
-      vec3 hi = vec3(0.85, 0.90, 0.96);
-      vec3 base = mix(lo, hi, clamp(vH, 0.0, 1.0));
-
-      // Grid lines — dark blue, clearly visible
-      vec2 g = fract(vUv * 40.0);
-      float gl1 = 1.0 - smoothstep(0.0, 0.04, min(g.x, g.y));
-
-      vec2 g2 = fract(vUv * 10.0);
-      float gl2 = 1.0 - smoothstep(0.0, 0.025, min(g2.x, g2.y));
-
-      vec3 lineCol = vec3(0.30, 0.50, 0.82);
-
-      // Traveling pulse — visible glow on lines
-      float pulse = sin(vUv.x * 30.0 - uTime * 2.0) * 0.5 + 0.5;
-      pulse      *= sin(vUv.y * 26.0 + uTime * 1.5) * 0.5 + 0.5;
-
-      vec3 col = base;
-      col = mix(col, lineCol, gl1 * 0.75);
-      col = mix(col, lineCol, gl2 * 0.40);
-      col += vec3(0.20, 0.45, 0.90) * pulse * gl1 * 0.35;
-
-      // Soft fade to white at far edges only
-      vec2 uvc = abs(vUv - 0.5) * 2.0;
-      float edge = smoothstep(0.75, 1.0, max(uvc.x, uvc.y));
-      col = mix(col, vec3(0.95, 0.95, 0.97), edge);
-
-      gl_FragColor = vec4(col, 1.0);
-    }
-  `,
+const terrUni = { uTime: { value: 0 } };
+const terrainGeo = new THREE.PlaneGeometry(220, 220, 130, 130);
+const terrain = new THREE.Mesh(terrainGeo, new THREE.ShaderMaterial({
+  uniforms: terrUni,
+  vertexShader: TERR_VERT,
+  fragmentShader: TERR_FRAG,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
   side: THREE.DoubleSide,
-});
-
-const terrainGeo = new THREE.PlaneGeometry(90, 90, 160, 160);
-const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+}));
 terrain.rotation.x = -Math.PI / 2;
-terrain.position.y = 0;
 scene.add(terrain);
 
 // ─── CUBE FACE TEXTURES ──────────────────────────────────────────────────────
@@ -574,7 +544,7 @@ function tick() {
   camera.lookAt(camLookAt);
 
   // ── Terrain animate ──────────────────────────────────────────────────────
-  terrainMat.uniforms.uTime.value = t;
+  terrUni.uTime.value = t;
 
   // ── Edge glow pulse ──────────────────────────────────────────────────────
   edgeMat.opacity = 0.08 + Math.sin(t * 1.1) * 0.04;
