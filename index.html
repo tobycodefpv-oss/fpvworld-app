@@ -199,10 +199,17 @@ const TERR_VERT = `
   varying vec2 vUv; varying float vH; uniform float uTime;
   void main(){
     vUv = uv; vec3 p = position;
-    p.y += sin(p.x * 0.12 + uTime * 0.6) * cos(p.z * 0.09 + uTime * 0.4) * 2.8
-          + sin(p.x * 0.25 - uTime * 0.8) * 1.2
-          + cos(p.z * 0.18 + uTime * 0.5) * 1.6;
-    vH = p.y;
+    // Plane is rotated -90deg on X, so local Z = world Y (up/down)
+    // Displace p.z to get visible 3D waves from camera perspective
+    float d = length(p.xy);
+    float wave = sin(p.x * 0.12 + uTime * 0.6) * cos(p.y * 0.09 + uTime * 0.4) * 3.2
+               + sin(p.x * 0.28 - uTime * 0.8) * 1.4
+               + cos(p.y * 0.20 + uTime * 0.55) * 1.8
+               + sin((p.x + p.y) * 0.15 - uTime * 0.7) * 1.0;
+    // Flatten center where cube sits (radius ~8 units)
+    float flatMask = smoothstep(3.0, 10.0, d);
+    p.z += wave * flatMask;
+    vH = p.z;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }`;
 
