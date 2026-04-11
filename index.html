@@ -193,6 +193,8 @@ rimLight.position.set(2, -6, -14);
 scene.add(rimLight);
 
 // ─── WAVE TERRAIN ────────────────────────────────────────────────────────────
+// Animated wave landscape — hill in center where cube sits
+// Color: minimal grey-white with very subtle blue grid lines + traveling pulse
 const terrainMat = new THREE.ShaderMaterial({
   uniforms: { uTime: { value: 0 } },
   vertexShader: `
@@ -203,13 +205,21 @@ const terrainMat = new THREE.ShaderMaterial({
       vUv = uv;
       vec3 pos = position;
       float d = length(pos.xz);
-      // gentle waves, flatten at center so pedestal sits flat
-      float wave = sin(pos.x * 0.55 + uTime * 0.5) * cos(pos.z * 0.48 + uTime * 0.38) * 0.55
-                 + sin(pos.x * 1.1  - uTime * 0.3) * 0.18
-                 + cos(pos.z * 0.9  + uTime * 0.4) * 0.18;
-      float mask = smoothstep(2.5, 7.0, d);  // flat in center
-      pos.y += wave * mask;
-      vH = pos.y;
+
+      // Central hill — gaussian bump, cube sits on top
+      float hill = 3.2 * exp(-d * d * 0.045);
+
+      // Traveling waves radiating outward — classic neon-grid style
+      float wave =
+        sin(pos.x * 0.7  + uTime * 1.1) * cos(pos.z * 0.6  + uTime * 0.8) * 0.9
+      + sin(pos.x * 1.4  - uTime * 0.7) * sin(pos.z * 1.2  + uTime * 0.9) * 0.45
+      + cos(pos.x * 0.38 + uTime * 0.5) * cos(pos.z * 0.42 - uTime * 0.6) * 0.6
+      + sin((pos.x + pos.z) * 0.55 - uTime * 1.3) * 0.3;
+
+      // Waves dampen at center so hill is clean
+      float waveMask = smoothstep(0.0, 5.5, d);
+      pos.y = hill + wave * waveMask;
+      vH = pos.y / 4.5;  // normalize for color
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
@@ -218,37 +228,36 @@ const terrainMat = new THREE.ShaderMaterial({
     varying vec2 vUv;
     varying float vH;
     void main() {
-      // Base: very light warm-white
-      vec3 base = vec3(0.955, 0.952, 0.960);
+      // Base surface: near-white with very faint cool tint
+      vec3 lo = vec3(0.93, 0.935, 0.948);   // low — slightly warm white
+      vec3 hi = vec3(0.88, 0.910, 0.960);   // high/peaks — slightly bluer
 
-      // Subtle grid lines — very fine, blue-grey
-      vec2 g = fract(vUv * 42.0);
-      float gridLine = 1.0 - smoothstep(0.0, 0.025, min(g.x, g.y));
+      vec3 base = mix(lo, hi, clamp(vH, 0.0, 1.0));
 
-      // Diagonal hatch lines — even subtler
-      float hatch = fract((vUv.x + vUv.y) * 28.0 + uTime * 0.04);
-      float hatchLine = 1.0 - smoothstep(0.0, 0.04, hatch);
+      // Grid lines — very fine, soft blue-grey
+      vec2 g = fract(vUv * 52.0);
+      float gl1 = 1.0 - smoothstep(0.0, 0.03, min(g.x, g.y));
 
-      // Blue tint for lines
-      vec3 lineCol = vec3(0.72, 0.80, 0.92);  // soft blue-grey
+      // Coarser secondary grid
+      vec2 g2 = fract(vUv * 13.0);
+      float gl2 = 1.0 - smoothstep(0.0, 0.018, min(g2.x, g2.y));
 
-      // Traveling pulse — very faint blue shimmer
-      float pulse = sin(vUv.x * 30.0 - uTime * 1.8) * 0.5 + 0.5;
-      pulse *= sin(vUv.y * 24.0 + uTime * 1.2) * 0.5 + 0.5;
-      vec3 pulseCol = mix(base, vec3(0.78, 0.87, 0.98), pulse * 0.06);
+      vec3 gridCol = vec3(0.68, 0.78, 0.92);  // soft blue
 
-      // Height tint — slightly bluer at wave peaks
-      float h01 = clamp((vH + 0.6) / 1.2, 0.0, 1.0);
-      vec3 col = mix(pulseCol, vec3(0.82, 0.88, 0.97), h01 * 0.12);
+      // Traveling pulse along grid — moves diagonally, very subtle
+      float pulse = sin(vUv.x * 38.0 - uTime * 2.2) * 0.5 + 0.5;
+      pulse      *= sin(vUv.y * 32.0 + uTime * 1.6) * 0.5 + 0.5;
+      float pulseStrength = pulse * clamp(vH * 0.5 + 0.3, 0.0, 1.0) * 0.12;
 
-      // Overlay lines
-      col = mix(col, lineCol, gridLine * 0.22);
-      col = mix(col, lineCol, hatchLine * 0.08);
+      vec3 col = base;
+      col = mix(col, gridCol, gl1 * 0.30);   // fine grid
+      col = mix(col, gridCol, gl2 * 0.14);   // coarse grid
+      col += gridCol * pulseStrength;         // additive pulse glow on lines
 
-      // Fade to white at edges (distance fade via uv)
-      vec2 uv2 = abs(vUv - 0.5) * 2.0;
-      float edgeFade = smoothstep(0.55, 1.0, max(uv2.x, uv2.y));
-      col = mix(col, vec3(0.97, 0.97, 0.98), edgeFade);
+      // Fade to plain white at edges
+      vec2 uvc = abs(vUv - 0.5) * 2.0;
+      float edge = smoothstep(0.5, 1.0, max(uvc.x, uvc.y));
+      col = mix(col, vec3(0.96, 0.96, 0.97), edge);
 
       gl_FragColor = vec4(col, 1.0);
     }
@@ -256,37 +265,11 @@ const terrainMat = new THREE.ShaderMaterial({
   side: THREE.DoubleSide,
 });
 
-const terrainGeo = new THREE.PlaneGeometry(80, 80, 120, 120);
+const terrainGeo = new THREE.PlaneGeometry(90, 90, 160, 160);
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.rotation.x = -Math.PI / 2;
-terrain.position.y = -0.01;
+terrain.position.y = 0;
 scene.add(terrain);
-
-// Shadow receiver on top of terrain
-const shadowReceiver = new THREE.Mesh(
-  new THREE.PlaneGeometry(30, 30),
-  new THREE.ShadowMaterial({ opacity: 0.10 })
-);
-shadowReceiver.rotation.x = -Math.PI / 2;
-shadowReceiver.position.y = 0.005;
-shadowReceiver.receiveShadow = true;
-scene.add(shadowReceiver);
-
-// ─── PEDESTAL ────────────────────────────────────────────────────────────────
-// Small round podest the cube sits on
-const pedMat = new THREE.MeshStandardMaterial({ color: 0xe8e5df, roughness: 0.35, metalness: 0.08 });
-
-const pedBase = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.22, 48), pedMat);
-pedBase.position.y = 0.11;
-pedBase.castShadow = true;
-pedBase.receiveShadow = true;
-scene.add(pedBase);
-
-const pedTop = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, 0.12, 48), pedMat);
-pedTop.position.y = 0.28;
-pedTop.castShadow = true;
-pedTop.receiveShadow = true;
-scene.add(pedTop);
 
 // ─── CUBE FACE TEXTURES ──────────────────────────────────────────────────────
 // BoxGeometry face order: +X(0) -X(1) +Y(2) -Y(3) +Z(4) -Z(5)
@@ -409,9 +392,9 @@ const cubeMaterials = [
   ]}), roughness: 0.08, metalness: 0.02 }),
 ];
 
-// Cube sits on pedestal — pedestal top is at y≈0.40, cube half=2.2
+// Cube sits on hill — hill peaks at y≈3.2 at center
 const CUBE_HALF = 2.2;
-const CUBE_Y = 0.40 + CUBE_HALF; // 2.6
+const CUBE_Y = 3.2 + CUBE_HALF; // 5.4
 const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), cubeMaterials);
 cube.position.y = CUBE_Y;
 cube.castShadow = true;
@@ -492,12 +475,12 @@ drone.add(droneLight);
 // 6 waypoints → camera visits all 5 visible faces in order, ends at angled CTA view
 // Cube center at y=2.2, orbit radius ~11 for sides, ~13 for top
 const camSpline = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(  0, 5.2,  13),   // sp=0.0 front  (+Z) — COMING SOON
-  new THREE.Vector3( 13, 5.2,   0),   // sp=0.2 right  (+X) — CONNECT
-  new THREE.Vector3(  0, 5.2, -13),   // sp=0.4 back   (-Z) — SHARE SPOTS
-  new THREE.Vector3(-13, 5.2,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
-  new THREE.Vector3(  0, 15,    3),   // sp=0.8 top    (+Y) — FPV WORLD
-  new THREE.Vector3(  9, 7.5,  11),   // sp=1.0 CTA angle view
+  new THREE.Vector3(  0, 7.5,  15),   // sp=0.0 front  (+Z) — COMING SOON
+  new THREE.Vector3( 15, 7.5,   0),   // sp=0.2 right  (+X) — CONNECT
+  new THREE.Vector3(  0, 7.5, -15),   // sp=0.4 back   (-Z) — SHARE SPOTS
+  new THREE.Vector3(-15, 7.5,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
+  new THREE.Vector3(  0, 18,    4),   // sp=0.8 top    (+Y) — FPV WORLD
+  new THREE.Vector3( 10, 9.5,  13),   // sp=1.0 CTA angle view
 ]);
 
 const tgtSpline = new THREE.CatmullRomCurve3([
@@ -552,7 +535,7 @@ function ease(x) { return x < 0.5 ? 2*x*x : -1+(4-2*x)*x; }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 
 // Camera lerp targets
-let camPos = new THREE.Vector3(0, 5.2, 13);
+let camPos = new THREE.Vector3(0, 7.5, 15);
 let camLookAt = new THREE.Vector3(0, CUBE_Y, 0);
 
 function tick() {
@@ -602,10 +585,10 @@ function tick() {
   // ── Drone flight path ────────────────────────────────────────────────────
   // Flies a lazy figure-8 / orbit around the cube, stays out of camera's way
   const dT = t * 0.38;
-  const dRadius = 7.5 + Math.sin(t * 0.21) * 1.5;
+  const dRadius = 9 + Math.sin(t * 0.21) * 2;
   drone.position.set(
     Math.sin(dT) * dRadius,
-    CUBE_Y + 2.2 + Math.sin(t * 0.55) * 1.2,
+    CUBE_Y + 3.0 + Math.sin(t * 0.55) * 1.5,
     Math.cos(dT * 0.7) * dRadius
   );
   // Bank into the turn
