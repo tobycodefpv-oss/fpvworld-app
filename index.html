@@ -206,8 +206,8 @@ const terrainMat = new THREE.ShaderMaterial({
       vec3 pos = position;
       float d = length(pos.xz);
 
-      // Central hill — gaussian bump, cube sits on top
-      float hill = 4.5 * exp(-d * d * 0.038);
+      // Central hill — small flat platform, cube sits on it
+      float hill = 0.4 * exp(-d * d * 0.12);
 
       // Traveling waves radiating outward — large amplitude, very visible from side
       float wave =
@@ -392,9 +392,9 @@ const cubeMaterials = [
   ]}), roughness: 0.08, metalness: 0.02 }),
 ];
 
-// Cube sits on hill — hill peaks at y≈4.5 at center
+// Cube sits directly on terrain — terrain at y=0, cube center at y=2.2
 const CUBE_HALF = 2.2;
-const CUBE_Y = 4.5 + CUBE_HALF; // 6.7
+const CUBE_Y = CUBE_HALF; // 2.2
 const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), cubeMaterials);
 cube.position.y = CUBE_Y;
 cube.castShadow = true;
@@ -475,12 +475,12 @@ drone.add(droneLight);
 // 6 waypoints → camera visits all 5 visible faces in order, ends at angled CTA view
 // Cube center at y=2.2, orbit radius ~11 for sides, ~13 for top
 const camSpline = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(  0, 7.5,  15),   // sp=0.0 front  (+Z) — COMING SOON
-  new THREE.Vector3( 15, 7.5,   0),   // sp=0.2 right  (+X) — CONNECT
-  new THREE.Vector3(  0, 7.5, -15),   // sp=0.4 back   (-Z) — SHARE SPOTS
-  new THREE.Vector3(-15, 7.5,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
-  new THREE.Vector3(  0, 18,    4),   // sp=0.8 top    (+Y) — FPV WORLD
-  new THREE.Vector3( 10, 9.5,  13),   // sp=1.0 CTA angle view
+  new THREE.Vector3(  0, 3.5,  13),   // sp=0.0 front  (+Z) — COMING SOON
+  new THREE.Vector3( 13, 3.5,   0),   // sp=0.2 right  (+X) — CONNECT
+  new THREE.Vector3(  0, 3.5, -13),   // sp=0.4 back   (-Z) — SHARE SPOTS
+  new THREE.Vector3(-13, 3.5,   0),   // sp=0.6 left   (-X) — FLY TOGETHER
+  new THREE.Vector3(  0, 14,    3),   // sp=0.8 top    (+Y) — FPV WORLD
+  new THREE.Vector3(  9, 5.5,  11),   // sp=1.0 CTA angle view
 ]);
 
 const tgtSpline = new THREE.CatmullRomCurve3([
@@ -535,7 +535,7 @@ function ease(x) { return x < 0.5 ? 2*x*x : -1+(4-2*x)*x; }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 
 // Camera lerp targets
-let camPos = new THREE.Vector3(0, 7.5, 15);
+let camPos = new THREE.Vector3(0, 3.5, 13);
 let camLookAt = new THREE.Vector3(0, CUBE_Y, 0);
 
 function tick() {
@@ -585,10 +585,10 @@ function tick() {
   // ── Drone flight path ────────────────────────────────────────────────────
   // Flies a lazy figure-8 / orbit around the cube, stays out of camera's way
   const dT = t * 0.38;
-  const dRadius = 9 + Math.sin(t * 0.21) * 2;
+  const dRadius = 8 + Math.sin(t * 0.21) * 1.5;
   drone.position.set(
     Math.sin(dT) * dRadius,
-    CUBE_Y + 3.0 + Math.sin(t * 0.55) * 1.5,
+    CUBE_Y + 2.5 + Math.sin(t * 0.55) * 1.2,
     Math.cos(dT * 0.7) * dRadius
   );
   // Bank into the turn
