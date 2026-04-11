@@ -228,36 +228,33 @@ const terrainMat = new THREE.ShaderMaterial({
     varying vec2 vUv;
     varying float vH;
     void main() {
-      // Base surface: near-white with very faint cool tint
-      vec3 lo = vec3(0.93, 0.935, 0.948);   // low — slightly warm white
-      vec3 hi = vec3(0.88, 0.910, 0.960);   // high/peaks — slightly bluer
-
+      // Base: light grey-blue — clearly visible against white bg
+      vec3 lo = vec3(0.78, 0.82, 0.88);
+      vec3 hi = vec3(0.85, 0.90, 0.96);
       vec3 base = mix(lo, hi, clamp(vH, 0.0, 1.0));
 
-      // Grid lines — very fine, soft blue-grey
-      vec2 g = fract(vUv * 52.0);
-      float gl1 = 1.0 - smoothstep(0.0, 0.03, min(g.x, g.y));
+      // Grid lines — dark blue, clearly visible
+      vec2 g = fract(vUv * 40.0);
+      float gl1 = 1.0 - smoothstep(0.0, 0.04, min(g.x, g.y));
 
-      // Coarser secondary grid
-      vec2 g2 = fract(vUv * 13.0);
-      float gl2 = 1.0 - smoothstep(0.0, 0.018, min(g2.x, g2.y));
+      vec2 g2 = fract(vUv * 10.0);
+      float gl2 = 1.0 - smoothstep(0.0, 0.025, min(g2.x, g2.y));
 
-      vec3 gridCol = vec3(0.55, 0.70, 0.92);  // visible blue-grey
+      vec3 lineCol = vec3(0.30, 0.50, 0.82);
 
-      // Traveling pulse along grid
-      float pulse = sin(vUv.x * 38.0 - uTime * 2.2) * 0.5 + 0.5;
-      pulse      *= sin(vUv.y * 32.0 + uTime * 1.6) * 0.5 + 0.5;
-      float pulseStrength = pulse * clamp(vH * 0.5 + 0.3, 0.0, 1.0) * 0.18;
+      // Traveling pulse — visible glow on lines
+      float pulse = sin(vUv.x * 30.0 - uTime * 2.0) * 0.5 + 0.5;
+      pulse      *= sin(vUv.y * 26.0 + uTime * 1.5) * 0.5 + 0.5;
 
       vec3 col = base;
-      col = mix(col, gridCol, gl1 * 0.55);   // fine grid — clearly visible
-      col = mix(col, gridCol, gl2 * 0.28);   // coarse grid
-      col += gridCol * pulseStrength;         // pulse glow
+      col = mix(col, lineCol, gl1 * 0.75);
+      col = mix(col, lineCol, gl2 * 0.40);
+      col += vec3(0.20, 0.45, 0.90) * pulse * gl1 * 0.35;
 
-      // Fade to plain white at edges
+      // Soft fade to white at far edges only
       vec2 uvc = abs(vUv - 0.5) * 2.0;
-      float edge = smoothstep(0.5, 1.0, max(uvc.x, uvc.y));
-      col = mix(col, vec3(0.96, 0.96, 0.97), edge);
+      float edge = smoothstep(0.75, 1.0, max(uvc.x, uvc.y));
+      col = mix(col, vec3(0.95, 0.95, 0.97), edge);
 
       gl_FragColor = vec4(col, 1.0);
     }
