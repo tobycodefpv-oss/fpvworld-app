@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPVWorld — Something Huge is Coming</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: auto; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Inter', 'Helvetica Neue', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Scroll container — tall enough for the full journey */
+    #scroll-container {
+      height: 600vh;
+      position: relative;
+    }
+
+    /* Fixed canvas */
+    #canvas-wrapper {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100vh;
+      z-index: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Overlay UI */
+    #ui {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100vh;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── SCENE 0: Title ── */
+    .scene {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      padding: 0 24px;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      pointer-events: none;
+    }
+
+    .scene.active { opacity: 1; }
+
+    #scene-0 {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #scene-0 .eyebrow {
+      font-size: 11px;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: #ff6a00;
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
+
+    #scene-0 h1 {
+      font-size: clamp(42px, 8vw, 96px);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #ffffff 0%, #ff6a00 60%, #ee0979 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #scene-0 .sub {
+      margin-top: 24px;
+      font-size: clamp(14px, 2vw, 18px);
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 1px;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      animation: fadeUpDown 2s ease-in-out infinite;
+    }
+
+    .scroll-hint svg { opacity: 0.4; }
+
+    @keyframes fadeUpDown {
+      0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.5; }
+      50% { transform: translateX(-50%) translateY(8px); opacity: 1; }
+    }
+
+    /* ── SCENE 1: Zoom-in message ── */
+    #scene-1 {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #scene-1 h2 {
+      font-size: clamp(32px, 6vw, 72px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    #scene-1 h2 span {
+      color: #ff6a00;
+    }
+
+    #scene-1 p {
+      margin-top: 20px;
+      font-size: clamp(14px, 1.8vw, 18px);
+      color: rgba(255,255,255,0.5);
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── SCENE 2: Features ── */
+    #scene-2 {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #scene-2 h2 {
+      font-size: clamp(28px, 5vw, 60px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 40px;
+    }
+
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .feature-pill {
+      background: rgba(255,106,0,0.12);
+      border: 1px solid rgba(255,106,0,0.3);
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px);
+    }
+
+    /* ── SCENE 3: CTA ── */
+    #scene-3 {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #scene-3 h2 {
+      font-size: clamp(28px, 5vw, 64px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+
+    #scene-3 p {
+      font-size: 16px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 36px;
+    }
+
+    .email-form {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      pointer-events: all;
+    }
+
+    .email-form input {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-size: 14px;
+      color: #fff;
+      width: 280px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .email-form input::placeholder { color: rgba(255,255,255,0.3); }
+    .email-form input:focus { border-color: #ff6a00; }
+
+    .email-form button {
+      background: linear-gradient(135deg, #ff6a00, #ee0979);
+      border: none;
+      border-radius: 8px;
+      padding: 14px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .email-form button:hover { opacity: 0.85; transform: scale(1.02); }
+
+    /* Progress bar */
+    #progress-bar {
+      position: fixed;
+      bottom: 0; left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #ff6a00, #ee0979);
+      z-index: 100;
+      transition: width 0.1s linear;
+    }
+
+    /* Logo top-left */
+    #logo {
+      position: fixed;
+      top: 28px; left: 32px;
+      z-index: 100;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+    }
+
+    #logo span { color: #ff6a00; }
+  </style>
+</head>
+<body>
+
+<div id="logo">FPV<span>World</span></div>
+<div id="progress-bar" style="width:0%"></div>
+
+<div id="scroll-container">
+  <div id="canvas-wrapper">
+    <canvas id="c"></canvas>
+  </div>
+
+  <div id="ui">
+
+    <!-- Scene 0: Hero -->
+    <div class="scene active" id="scene-0">
+      <div class="eyebrow">fpvworld.app</div>
+      <h1>Something<br>Huge is<br>Coming</h1>
+      <p class="sub">Scroll to enter the world</p>
+      <div class="scroll-hint">
+        <svg width="20" height="30" viewBox="0 0 20 30" fill="none">
+          <rect x="1" y="1" width="18" height="28" rx="9" stroke="white" stroke-width="1.5"/>
+          <circle cx="10" cy="8" r="2.5" fill="white"/>
+        </svg>
+        Scroll
+      </div>
+    </div>
+
+    <!-- Scene 1: Dive in -->
+    <div class="scene" id="scene-1">
+      <h2>The FPV world<br>is about to <span>connect.</span></h2>
+      <p>One platform. Every pilot. Every spot. Every community.</p>
+    </div>
+
+    <!-- Scene 2: Features -->
+    <div class="scene" id="scene-2">
+      <h2>Built for pilots.<br>Powered by community.</h2>
+      <div class="features">
+        <div class="feature-pill">Spot Map & Discovery</div>
+        <div class="feature-pill">Community Meetups</div>
+        <div class="feature-pill">Flight Logs</div>
+        <div class="feature-pill">Pilot Profiles</div>
+        <div class="feature-pill">Gear Database</div>
+        <div class="feature-pill">Local Crews</div>
+        <div class="feature-pill">Event Calendar</div>
+        <div class="feature-pill">FPV News Feed</div>
+      </div>
+    </div>
+
+    <!-- Scene 3: CTA -->
+    <div class="scene" id="scene-3">
+      <h2>Be first to fly.</h2>
+      <p>Join the waitlist. Early access for founding pilots.</p>
+      <form class="email-form" onsubmit="handleSubmit(event)">
+        <input type="email" placeholder="your@email.com" required id="email-input" />
+        <button type="submit">Notify Me</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js';
+
+  // ── Setup ──────────────────────────────────────────────
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  // Start: high up in the sky looking down
+  camera.position.set(0, 80, 0);
+  camera.lookAt(0, 0, 0);
+
+  // ── Stars ──────────────────────────────────────────────
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 6000;
+  const starPos = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount * 3; i++) {
+    starPos[i] = (Math.random() - 0.5) * 400;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: true });
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
+
+  // ── Ground Plane ──────────────────────────────────────
+  const groundGeo = new THREE.PlaneGeometry(300, 300, 80, 80);
+  const groundMat = new THREE.MeshStandardMaterial({
+    color: 0x0a0a0a,
+    wireframe: true,
+    opacity: 0.35,
+    transparent: true,
+  });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0;
+  scene.add(ground);
+
+  // Animate ground vertices (wave)
+  const groundPositions = groundGeo.attributes.position;
+  const groundOrigY = new Float32Array(groundPositions.count);
+  for (let i = 0; i < groundPositions.count; i++) {
+    groundOrigY[i] = groundPositions.getY(i);
+  }
+
+  // ── Grid accent ───────────────────────────────────────
+  const gridHelper = new THREE.GridHelper(300, 60, 0xff6a00, 0x111111);
+  gridHelper.material.opacity = 0.15;
+  gridHelper.material.transparent = true;
+  scene.add(gridHelper);
+
+  // ── Glow Fog Plane ─────────────────────────────────────
+  const glowGeo = new THREE.PlaneGeometry(80, 80);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xff6a00,
+    transparent: true,
+    opacity: 0.04,
+    depthWrite: false,
+  });
+  const glowPlane = new THREE.Mesh(glowGeo, glowMat);
+  glowPlane.rotation.x = -Math.PI / 2;
+  glowPlane.position.y = 0.2;
+  scene.add(glowPlane);
+
+  // ── Drone ─────────────────────────────────────────────
+  const droneGroup = new THREE.Group();
+
+  // Body
+  const bodyGeo = new THREE.BoxGeometry(0.6, 0.12, 0.6);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.3 });
+  droneGroup.add(new THREE.Mesh(bodyGeo, bodyMat));
+
+  // 4 arms
+  const armMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.5 });
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([x, z]) => {
+    const armGeo = new THREE.BoxGeometry(0.08, 0.06, 0.7);
+    const arm = new THREE.Mesh(armGeo, armMat);
+    arm.position.set(x * 0.35, 0, z * 0.35);
+    arm.rotation.y = Math.atan2(x, z);
+    droneGroup.add(arm);
+
+    // Propeller disc (glowing)
+    const propGeo = new THREE.CircleGeometry(0.2, 16);
+    const propMat = new THREE.MeshBasicMaterial({
+      color: 0xff6a00,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+    });
+    const prop = new THREE.Mesh(propGeo, propMat);
+    prop.position.set(x * 0.35, 0.08, z * 0.35);
+    prop.rotation.x = -Math.PI / 2;
+    droneGroup.add(prop);
+
+    // LED dot
+    const ledGeo = new THREE.SphereGeometry(0.04, 8, 8);
+    const ledMat = new THREE.MeshBasicMaterial({ color: 0xff6a00 });
+    const led = new THREE.Mesh(ledGeo, ledMat);
+    led.position.set(x * 0.35, 0.08, z * 0.35);
+    droneGroup.add(led);
+  });
+
+  // Camera lens (front)
+  const lensGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.08, 12);
+  const lensMat = new THREE.MeshStandardMaterial({ color: 0x0088ff, emissive: 0x0044aa });
+  const lens = new THREE.Mesh(lensGeo, lensMat);
+  lens.rotation.x = Math.PI / 2;
+  lens.position.set(0, 0, -0.35);
+  droneGroup.add(lens);
+
+  droneGroup.position.set(-30, 3, -5);
+  droneGroup.visible = false;
+  scene.add(droneGroup);
+
+  // ── Lights ────────────────────────────────────────────
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+  const dirLight = new THREE.DirectionalLight(0xff6a00, 1.2);
+  dirLight.position.set(5, 20, 5);
+  scene.add(dirLight);
+
+  const pointLight = new THREE.PointLight(0xff6a00, 2, 30);
+  pointLight.position.set(0, 3, 0);
+  scene.add(pointLight);
+
+  // ── Floating particles ────────────────────────────────
+  const particleGeo = new THREE.BufferGeometry();
+  const pCount = 300;
+  const pPos = new Float32Array(pCount * 3);
+  for (let i = 0; i < pCount; i++) {
+    pPos[i * 3] = (Math.random() - 0.5) * 60;
+    pPos[i * 3 + 1] = Math.random() * 8;
+    pPos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+  }
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const particleMat = new THREE.PointsMaterial({ color: 0xff6a00, size: 0.08, transparent: true, opacity: 0.6 });
+  const particles = new THREE.Points(particleGeo, particleMat);
+  particles.visible = false;
+  scene.add(particles);
+
+  // ── Camera keyframes ──────────────────────────────────
+  // progress 0.0 → scene 0: high sky, looking down
+  // progress 0.25 → scene 1: mid-air, tilting toward horizon
+  // progress 0.5 → scene 2: low flyover, parallel to ground
+  // progress 0.75 → scene 3: settled, dramatic angle
+
+  const camKeyframes = [
+    { progress: 0,    pos: new THREE.Vector3(0, 80, 20),  target: new THREE.Vector3(0, 0, 0) },
+    { progress: 0.25, pos: new THREE.Vector3(0, 30, 30),  target: new THREE.Vector3(0, 0, -10) },
+    { progress: 0.5,  pos: new THREE.Vector3(0, 5, 40),   target: new THREE.Vector3(0, 2, 0) },
+    { progress: 0.75, pos: new THREE.Vector3(8, 4, 28),   target: new THREE.Vector3(0, 1, 0) },
+    { progress: 1.0,  pos: new THREE.Vector3(6, 6, 22),   target: new THREE.Vector3(0, 0, -5) },
+  ];
+
+  function lerpV3(a, b, t) { return new THREE.Vector3().lerpVectors(a, b, t); }
+
+  function getCameraFromProgress(p) {
+    let i = 0;
+    while (i < camKeyframes.length - 2 && camKeyframes[i + 1].progress <= p) i++;
+    const kf0 = camKeyframes[i];
+    const kf1 = camKeyframes[i + 1];
+    const t = (p - kf0.progress) / (kf1.progress - kf0.progress);
+    const smoothT = t * t * (3 - 2 * t); // smoothstep
+    return {
+      pos: lerpV3(kf0.pos, kf1.pos, smoothT),
+      target: lerpV3(kf0.target, kf1.target, smoothT),
+    };
+  }
+
+  // ── Scene visibility ──────────────────────────────────
+  const scenes = [
+    document.getElementById('scene-0'),
+    document.getElementById('scene-1'),
+    document.getElementById('scene-2'),
+    document.getElementById('scene-3'),
+  ];
+
+  // Scene ranges (scroll progress)
+  const sceneRanges = [
+    [0, 0.18],
+    [0.2, 0.42],
+    [0.45, 0.67],
+    [0.70, 1.0],
+  ];
+
+  function updateScenes(p) {
+    scenes.forEach((s, i) => {
+      const [start, end] = sceneRanges[i];
+      const visible = p >= start && p <= end;
+      s.classList.toggle('active', visible);
+    });
+  }
+
+  // ── Scroll ────────────────────────────────────────────
+  const progressBar = document.getElementById('progress-bar');
+  let scrollProgress = 0;
+  let targetProgress = 0;
+  let droneX = -30;
+
+  window.addEventListener('scroll', () => {
+    const maxScroll = document.getElementById('scroll-container').scrollHeight - window.innerHeight;
+    targetProgress = Math.min(window.scrollY / maxScroll, 1);
+    progressBar.style.width = (targetProgress * 100) + '%';
+    updateScenes(targetProgress);
+  });
+
+  // ── Animate ───────────────────────────────────────────
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    // Smooth scroll progress
+    scrollProgress += (targetProgress - scrollProgress) * 0.08;
+
+    // Camera
+    const { pos, target } = getCameraFromProgress(scrollProgress);
+    camera.position.copy(pos);
+    camera.lookAt(target);
+
+    // Ground wave
+    for (let i = 0; i < groundPositions.count; i++) {
+      const x = groundPositions.getX(i);
+      const z = groundOrigY[i];
+      groundPositions.setY(i, Math.sin(x * 0.3 + t) * 0.3 + Math.cos(z * 0.2 + t * 0.8) * 0.3);
+    }
+    groundPositions.needsUpdate = true;
+
+    // Stars rotate slowly
+    stars.rotation.y = t * 0.01;
+
+    // Drone fly-through (appears at 35%–65%)
+    if (scrollProgress > 0.32 && scrollProgress < 0.68) {
+      droneGroup.visible = true;
+      particles.visible = true;
+      droneX = -30 + (scrollProgress - 0.32) / 0.36 * 70;
+      droneGroup.position.x = droneX;
+      droneGroup.position.y = 3 + Math.sin(t * 3) * 0.2;
+      droneGroup.rotation.z = Math.sin(t * 2) * 0.08;
+      droneGroup.rotation.y = -Math.PI / 8;
+    } else {
+      droneGroup.visible = false;
+    }
+
+    // Particles drift
+    const pArr = particleGeo.attributes.position.array;
+    for (let i = 0; i < pCount; i++) {
+      pArr[i * 3 + 1] += 0.005;
+      if (pArr[i * 3 + 1] > 8) pArr[i * 3 + 1] = 0;
+    }
+    particleGeo.attributes.position.needsUpdate = true;
+
+    // Pulsing point light
+    pointLight.intensity = 1.5 + Math.sin(t * 2) * 0.5;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  // ── Resize ────────────────────────────────────────────
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+
+<script>
+  function handleSubmit(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.textContent = 'You\'re on the list!';
+    btn.style.background = 'linear-gradient(135deg, #00c851, #007e33)';
+    e.target.querySelector('input').disabled = true;
+    btn.disabled = true;
+  }
+</script>
+
+</body>
+</html>
